@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+get_abs_dirname() {
+    echo "$(cd "$(dirname "$1")" && pwd)"
+}
+
+get_abs_filename() {
+  echo "$(get_abs_dirname "$1")/$(basename "$1")"
+}
+
+SCRIPT_DIR="$(get_abs_dirname "${BASH_SOURCE[0]}")"
+
+if [[ -z "${GIT_MASK_WRAPPER}" || -z "${GIT_MASK_WRAPPER_DIR}" ]]; then
+    export GIT_MASK_WRAPPER_DIR="${SCRIPT_DIR}/git-wrapper"
+    export GIT_MASK_WRAPPER="${GIT_MASK_WRAPPER_DIR}/git"
+fi
+
+if [[ -z "${GIT_MASK_REAL_GIT_PROGRAM}" ]]; then
+    export GIT_MASK_REAL_GIT_PROGRAM="$(
+        which -a git | while read -r exe
+        do
+            exe_dir="$(get_abs_dirname "$exe")"
+            if [[ "$exe_dir" != "$GIT_MASK_WRAPPER_DIR" ]]; then
+                echo "$(get_abs_filename "$exe")"
+                break
+            fi
+        done
+    )"
+fi
+
+if [[ ! -x "$GIT_MASK_REAL_GIT_PROGRAM" ]]; then
+    echo "git-profile cannot find original git executable from \$PATH!" >&2
+    exit 1
+fi
+
+alias git="${GIT_MASK_REAL_GIT_PROGRAM}"
+
+
+
+(
+    echo "[git-mask] GIT_MASK_WRAPPER = $GIT_MASK_WRAPPER"
+    echo "[git-mask] GIT_MASK_REAL_GIT_PROGRAM = $GIT_MASK_REAL_GIT_PROGRAM"
+    echo "[git-mask] args = $@"
+
+    env
+)
