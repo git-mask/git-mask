@@ -12,6 +12,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	MODE     = DetectGitMaskMode()
+	REAL_GIT = core.MustFindGit()
+)
+
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
@@ -83,6 +88,16 @@ const (
 	WrapperMode
 )
 
+func DetectGitMaskMode() GitMaskMode {
+	self, err := os.Executable()
+	cobra.CheckErr(err)
+	self = exeName(self)
+	if self == "git" {
+		return WrapperMode
+	}
+	return PluginMode
+}
+
 func exeName(path string) string {
 	name := filepath.Base(path)
 	if ext := filepath.Ext(name); ext != "" {
@@ -91,26 +106,11 @@ func exeName(path string) string {
 	return strings.ToLower(name)
 }
 
-func DetectGitMaskMode() (mode GitMaskMode, err error) {
-	self, err := os.Executable()
-	if err != nil {
-		return
-	}
-	self = exeName(self)
-	if self == "git" {
-		return WrapperMode, nil
-	}
-	return PluginMode, nil
-}
-
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	mode, err := DetectGitMaskMode()
-	cobra.CheckErr(err)
-
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
+	if MODE == WrapperMode {
+		fmt.Println("Running Wrapper Mode")
+		ExecuteWrapper()
 	}
 }

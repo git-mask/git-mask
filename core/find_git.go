@@ -3,6 +3,8 @@ package core
 import (
 	"os"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 func FindGit() (string, error) {
@@ -27,4 +29,10 @@ func FindGit() (string, error) {
 		}
 	}
 	return "", ErrNotFound
+}
+
+func MustFindGit() string {
+	path, err := FindGit()
+	cobra.CheckErr(err)
+	return path
 }

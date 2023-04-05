@@ -4,16 +4,25 @@ There are 2 modes git-mask can be setup:
 
 User interact with git-mask with `git mask <command> [flags]` commands.
 
-In this case, the official `git` executable is first invoked. It searches for `git-mask` executable from PATH, and invoke it, passing the rest of the user arguments to it.
+In this case, the official `git` executable is first invoked. It searches for
+`git-mask` executable from PATH, and invoke it, passing the rest of the user
+arguments to it.
 
 * Entry executable: official `git`
 * git-mask executable file name: `git-mask`
 
 2. Wrapper Mode.
 
-User install git-mask executable as `git` with higher priority in the PATH search list.
+User install git-mask executable as `git` with higher priority in the PATH
+search list.
 
-In this case, user can use Git commands seemlessly like `git clone git@github.com:user/repo`. Under the hood, the git-mask executable disguised with the file name `git` is first invoked. git-mask would search for the next `git` executable from the PATH to be used as the real official `git`. Then the user's command will be handled in the same way as `git mask run -- clone git@github.com:user/repo`. Unless the user is executing `git mask <command> [flags]`, then git-mask would handle it internally.
+In this case, user can use Git commands seemlessly like `git clone
+git@github.com:user/repo`. Under the hood, the git-mask executable disguised
+with the file name `git` is first invoked. git-mask would search for the next
+`git` executable from the PATH to be used as the real official `git`. Then the
+user's command will be handled in the same way as `git mask run -- clone
+git@github.com:user/repo`. Unless the user is executing `git mask <command>
+[flags]`, then git-mask would handle it internally.
 
 * Entry executable: git-mask
 * git-mask executable file name: `git`
@@ -27,8 +36,10 @@ Determine which mode git-mask is running in.
 * Otherwise we can say it's running in Plugin Mode.
 
 If git-mask is in Wrapper Mode:
-    * If the top-level command is `mask`, then handle the rest of the command line with git-mask's Plugin Mode's rootCmd
-    * Else, handle the rest of the command line with git-mask's runCmd
+
+  * If the top-level command is `mask`, then handle the rest of the command line
+    with git-mask's Plugin Mode's rootCmd
+  * Else, handle the rest of the command line with git-mask's runCmd
 
 
 
@@ -59,4 +70,16 @@ Invoke `git <cmd>` using the official `git`
 
 * `--url` glob for remote url matching (can have multiple)
 * `--profile`
+
+
+
+## Determine the profile to use
+
+- `git -p <profile>` in Wrapper Mode, or `git mask run -p <profile>` in Plugin
+  Mode, use the specified profile
+- `GIT_MASK_PROFILE` environment variable
+- `git clone <url>` in Wrapper Mode, or `git mask run clone` in Plugin Mode,
+  apply configured rules to the url and use the matching profile
+- otherwise, find the first url of the origin remote, apply configured rules and
+  use the matching profile
 

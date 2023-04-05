@@ -14,18 +14,6 @@ import (
 // ErrNotFound is the error resulting if a path search failed to find an executable file.
 var ErrNotFound = errors.New("executable file not found in $PATH")
 
-const (
-	R_OK       = 0x4
-	W_OK       = 0x2
-	X_OK       = 0x1
-	AT_EACCESS = 0x200
-	AT_FDCWD   = -0x64
-)
-
-func Eaccess(path string, mode uint32) error {
-	return syscall.Faccessat(AT_FDCWD, path, mode, AT_EACCESS)
-}
-
 func findExecutable(file string) error {
 	d, err := os.Stat(file)
 	if err != nil {
@@ -34,13 +22,6 @@ func findExecutable(file string) error {
 	m := d.Mode()
 	if m.IsDir() {
 		return syscall.EISDIR
-	}
-	err = Eaccess(file, X_OK)
-	// ENOSYS means Eaccess is not available or not implemented.
-	// EPERM can be returned by Linux containers employing seccomp.
-	// In both cases, fall back to checking the permission bits.
-	if err == nil || (err != syscall.ENOSYS && err != syscall.EPERM) {
-		return err
 	}
 	if m&0111 != 0 {
 		return nil
@@ -64,23 +45,27 @@ func LookPath(file string) ([]string, error) {
 	if strings.Contains(file, "/") {
 		err := findExecutable(file)
 		if err == nil {
-			return file, nil
+			return []string{file}, nil
 		}
-		return "", &LookPathError{file, err}
+		return nil, &LookPathError{file, err}
 	}
-	path := os.Getenv("PATH")
-	for _, dir := range filepath.SplitList(path) {
+	var paths []string
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		if dir == "" {
 			// Unix shell semantics: path element "" means "."
 			dir = "."
 		}
 		path := filepath.Join(dir, file)
 		if err := findExecutable(path); err == nil {
-			if !filepath.IsAbs(path) && execerrdot.Value() != "0" {
-				return path, &Error{file, ErrDot}
-			}
-			return path, nil
+			paths = append(paths, path)
 		}
 	}
-	return "", &Error{file, ErrNotFound}
+	if len(paths) > 0 {
+		return paths, nil
+	}
+	return nil, &LookPathError{file, ErrNotFound}
+}
+
+func IsExecutable(path string) bool {
+	return findExecutable(path) == nil
 }
